@@ -8,10 +8,29 @@
 
 import requests
 from requests.adapters import HTTPAdapter
+from requests.exceptions import ConnectionError
 from ..configuration import Configuration
 from .http_client import HttpClient
 from .http_response import HttpResponse
 from .http_method_enum import HttpMethodEnum
+
+
+class CustomHTTPAdapter(HTTPAdapter):
+    """Custom adapter to handle connection resets."""
+
+    def send(self, request, **kwargs):
+        try:
+            # Try sending the request
+            return super().send(request, **kwargs)
+        except (ConnectionError) as e:
+            # Handle connection reset
+            self.close()  # Close the pool to reset connections
+            # Retry the request once
+            try:
+                return super().send(request, **kwargs)
+            except Exception as e:
+                # If it fails again, raise the exception
+                raise e
 
 class RequestsClient(HttpClient):
 
