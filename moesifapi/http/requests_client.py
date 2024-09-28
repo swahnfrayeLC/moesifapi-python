@@ -16,21 +16,21 @@ from .http_method_enum import HttpMethodEnum
 
 
 class CustomHTTPAdapter(HTTPAdapter):
-    """Custom adapter to handle connection resets."""
+    """Custom adapter with enhanced exception handling."""
 
     def send(self, request, **kwargs):
-        try:
-            # Try sending the request
-            return super().send(request, **kwargs)
-        except (ConnectionError) as e:
-            # Handle connection reset
-            self.close()  # Close the pool to reset connections
-            # Retry the request once
+        max_retries = 2  # Define how many times to retry
+        for attempt in range(max_retries + 1):
             try:
                 return super().send(request, **kwargs)
-            except Exception as e:
-                # If it fails again, raise the exception
-                raise e
+            except (ConnectionError) as e:
+                if attempt == max_retries:
+                    # If it's the last attempt, raise the exception
+                    raise e
+                else:
+                    # Close the pool and retry
+                    self.close()
+                    continue  # Retry the request
 
 class RequestsClient(HttpClient):
 
